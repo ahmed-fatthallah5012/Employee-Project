@@ -1,0 +1,84 @@
+﻿@page "/employee/form/{id:int?}"
+@using EmployeeProject.Data
+@using DataModel.Models
+@using System.IO
+
+@inject NavigationManager Manager
+@inject EmployeeService Service
+
+@if (Id.HasValue)
+{
+    <h3>Update Selected Employee</h3>
+}
+else
+{
+    <h3>Create an Employee</h3>
+}
+<EditForm Model="Service.Employee" OnValidSubmit="SaveAsync">
+    <DataAnnotationsValidator />
+    <div class="form-group">
+        <label for="name">Name:</label>
+        <InputText class="form-control" placeholder="Name" id="name" @bind-Value="Service.Employee.Name"></InputText>
+        <ValidationMessage For="() => Service.Employee.Name" />
+    </div>
+    <div class="form-group">
+        <label for="email">Email address:</label>
+        <InputText type="email" class="form-control" placeholder="email" id="email" @bind-Value="Service.Employee.Email"></InputText>
+        <ValidationMessage For="() => Service.Employee.Email" />
+    </div>
+    <div class="form-group">
+        <label for="phone">Phone:</label>
+        <InputText type="phone" class="form-control" placeholder="Phone" id="phone" @bind-Value="Service.Employee.Phone"></InputText>
+        <ValidationMessage For="() => Service.Employee.Phone" />
+    </div>
+    <div class="form-group">
+        <label for="file">Photo Upload:</label>
+        <InputFile class="form-control" id="file" OnChange="HandleFileSelected"></InputFile>
+        <ValidationMessage For="() => Service.Employee.Photo" />
+    </div>
+    <button class="btn btn-outline-primary" type="submit">Save</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private bool _shouldRender;
+
+    protected override bool ShouldRender() => _shouldRender;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            await Service.GetSingleEmployee(Id.Value);
+        }
+        else
+        {
+            Service.SetEmployee(new Employee());
+        }
+        _shouldRender = Service.Employee != null;
+    }
+
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var ms = new MemoryStream();
+        await e.File.OpenReadStream().CopyToAsync(ms);
+        Service.Employee.Photo = ms.ToArray();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Id.HasValue)
+        {
+            await Service.UpdateEmployeeAsync();
+        }
+        else
+        {
+            await Service.AddEmployeeAsync();
+        }
+        Manager.NavigateTo("employee");
+    }
+
+}

@@ -1,0 +1,72 @@
+﻿@page "/employee"
+@using EmployeeProject.Data
+@using DataModel.Models
+@inject EmployeeService Service
+@inject IJSRuntime JsRuntime
+@inject NavigationManager Manager
+
+<h3>Employees Data</h3>
+<button class="btn btn-outline-primary" @onclick="()=>NavToEmployeeForm()">Add Employee</button>
+<br/>
+<table id="employee">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Photo</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Service.Employees != null)
+        {
+            @foreach (var item in Service.Employees)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Name</td>
+                    <td>@item.Email</td>
+                    <td>@item.Phone</td>
+                    <td><img src="data:image/bmp;base64, @(Convert.ToBase64String(item.Photo))" width="200" height="200"/></td>
+                    <td>
+                        <button class="btn btn-outline-info" @onclick="()=>NavToEmployeeForm(item.Id)">Edit</button>
+                        <button class="btn btn-outline-danger" @onclick="()=>RemoveEmployee(item)">Delete</button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+@code {
+    IJSObjectReference _module;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Service.GetAllEmployeesData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./Script.js");
+            await _module.InvokeVoidAsync("AddDataTable", "#employee");
+        }
+    }
+
+    private async Task NavToEmployeeForm(int id = 0)
+    {
+        await _module.InvokeVoidAsync("DestroyDataTable", "#employee");
+        Manager.NavigateTo(id == 0 ? "employee/form" : $"employee/form/{id}");
+    }
+
+    private async Task RemoveEmployee(Employee employee)
+    {
+        Service.SetEmployee(employee);
+        await Service.RemoveEmployeeAsync();
+        await Service.GetAllEmployeesData();
+    }
+
+}
